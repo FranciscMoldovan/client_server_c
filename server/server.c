@@ -192,12 +192,12 @@ BOOLEAN InterpretCommand(
                 Log("[LOGIN] User %s (%d) logged in\n", gUserData[*UserId].Username, *UserId);
 				///
 				logged_in_user_name_size = strlen(gUserData[*UserId].Username);
-				logged_in_user_name = (char*)malloc((2+logged_in_user_name_size)*sizeof(char));
-				memcpy(logged_in_user_name, &(gUserData[*UserId].Username), logged_in_user_name_size);
-				logged_in_user_name[logged_in_user_name_size] = '\\';
-				logged_in_user_name[logged_in_user_name_size+1] = '\0';
+				logged_in_user_name = (char*)malloc((2+logged_in_user_name_size)*sizeof(char)); // prep for '\' and '\0'
+				memcpy(logged_in_user_name, &(gUserData[*UserId].Username), logged_in_user_name_size); // get the name from g var
+				logged_in_user_name[logged_in_user_name_size] = '\\'; // e.g. 'test/'
+				logged_in_user_name[logged_in_user_name_size+1] = '\0'; // terminate string
 
-				printf("YOU ARE LOGGED AS %s", logged_in_user_name);
+				printf("YOU ARE LOGGED AS %s\n", logged_in_user_name);
 				///
                 return TRUE;
             }
@@ -234,16 +234,15 @@ BOOLEAN InterpretCommand(
 				WIN32_FIND_DATA FindFileData;
 				HANDLE hFind = INVALID_HANDLE_VALUE;
 				//
-				// The extra one comes from path \ 
-				newpath = (char*)malloc(1 + len + logged_in_user_name_size); 
-				memcpy(newpath, logged_in_user_name, 1 + logged_in_user_name_size);
-				*(newpath + logged_in_user_name_size) = '\\';
-				memcpy(newpath + logged_in_user_name_size + 1, Parameter, strlen(Parameter));
-				newpath[1 + len + logged_in_user_name_size] = '\0';
-				printf("The PATH=%s\n", newpath); 
-
+				// The extra one comes from path  
+				newpath = (char*)malloc(1 + len + logged_in_user_name_size); // e.g. test/test_file.txt
+				memcpy(newpath, logged_in_user_name, 1 + logged_in_user_name_size); // dir path takes user name
+				*(newpath + logged_in_user_name_size) = '\\'; // prep the separator
+				memcpy(newpath + logged_in_user_name_size + 1, Parameter, strlen(Parameter)); // add the txt file
+				newpath[1 + len + logged_in_user_name_size] = '\0'; // terminate the string
+		
+				// relative path to the Debug dir.
 				last_created_file_name = newpath;
-				//newpath = strcat()
 				//
 				hFind = FindFirstFile(newpath, &FindFileData);
 				GetLastError();
@@ -263,13 +262,6 @@ BOOLEAN InterpretCommand(
 					if (hFile != INVALID_HANDLE_VALUE)
 					{
 						SetReply(Output, OutLength, "[OK] Created new file");
-
-//						last_created_file_name_size = strlen(newpath);
-//						last_created_file_name = (char*)malloc(last_created_file_name_size);
-//						memcpy(last_created_file_name, newpath, last_created_file_name_size);
-//						last_created_file_name[last_created_file_name_size] = '\0';
-
-		//				printf("\n\nSTRING LAST FILE MADE = %s\n\n", last_created_file_name);
 						CloseHandle(hFile);
 					}
 					else
@@ -284,7 +276,6 @@ BOOLEAN InterpretCommand(
 
 				CloseHandle(hFind);
 				return TRUE;
-
 
 				//
 				newpath = NULL;
@@ -334,6 +325,7 @@ BOOLEAN InterpretCommand(
 					{
 						DWORD dwWritten;
 
+						// modifications for printing a new line each time
 						char* param_with_CRLF;
 						param_with_CRLF = (char*)malloc(strlen(Parameter) + 1);
 						memcpy(param_with_CRLF, Parameter, strlen(Parameter));
@@ -407,6 +399,11 @@ BOOLEAN InterpretCommand(
 					progress = 0;
 					do_work(newpath, 4, 0xAA);
 				}
+
+				//
+				newpath = NULL;
+				free(newpath);
+				//
 
 			}
 			else
