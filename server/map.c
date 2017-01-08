@@ -78,12 +78,14 @@ MapFile(
 			__leave;
 		}
 
-
+#pragma warning( push )
+#pragma warning( disable : 4133)
 		if (!GetFileSizeEx(Mapping->FileHandle, &Mapping->DataSize))
 		{
 			result = GetLastError();
 			__leave;
 		}
+#pragma warning( pop ) 
 	}
 	__finally
 	{

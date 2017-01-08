@@ -4,14 +4,15 @@
 #include <process.h>
 #include "crypto.h"
 
-void __stdcall xor_with_key(UINT8* aChar, UINT8 key)
+void __stdcall xor_with_key(UINT8* aChar, const UINT8 key)
 {
 	*aChar ^= key;
 }
-unsigned int __stdcall thread_func(void *data)
+
+void __stdcall thread_func(void *data)
 {
 	int *args = (int*)data; 
-	for (size_t i = args[0]; i <= args[1]; i++)
+	for (size_t i = args[0]; i <= (size_t)args[1]; i++)
 	{
 		xor_with_key(map.Data + i, (UINT8)args[2]);
 	
@@ -55,7 +56,10 @@ void do_work(const char* file_path, const size_t num_threads, const UINT8 key)
 	if (ghMutex == NULL)
 	{
 		printf("CreateMutex error: %d\n", GetLastError());
+#pragma warning( push )
+#pragma warning( disable : 4098 )
 		return 1;
+#pragma warning( pop )
 	}
 
 	DWORD result;
@@ -64,7 +68,10 @@ void do_work(const char* file_path, const size_t num_threads, const UINT8 key)
 	if (ERROR_SUCCESS != result)
 	{
 		printf("MapFile failed with result %u\n", result);
+#pragma warning( push )
+#pragma warning( disable : 4098 )
 		return result;
+#pragma warning( pop )
 	}
 
 	printf("MapFile succeeded\n");
@@ -84,9 +91,9 @@ void do_work(const char* file_path, const size_t num_threads, const UINT8 key)
 		}
 		else
 		{
-			start = 1 + i * (map.DataSize - 1) / num_threads;
+			start = (int)( 1 + i * (map.DataSize - 1) / num_threads);
 		}
-		end = (i + 1) * (map.DataSize - 1) / num_threads;
+		end = (int)((i + 1) * (map.DataSize - 1) / num_threads);
 
 		int *th_args = (int*)malloc(3 * sizeof(int));
 		th_args[0] = start;
@@ -95,7 +102,10 @@ void do_work(const char* file_path, const size_t num_threads, const UINT8 key)
 
 		printf("TH#%d\n", i);
 		printf("[Th%d:START=%d][Th%d:END=%d] diff = %d #elem = %d\n", i, start, i, end, end - start, end - start + 1);
+#pragma warning( push )
+#pragma warning( disable : 4133 )
 		all_threads[i] = (HANDLE)_beginthreadex(0, 0, &thread_func, th_args, 0, 0);
+#pragma warning( pop )
 	}
 
 	WaitForMultipleObjects(num_threads, all_threads, 1, INFINITE);

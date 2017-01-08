@@ -16,7 +16,7 @@
 #include <time.h>
 #define DEFAULT_PORT    "27015"
 
-extern progress;
+extern UINT32 progress;
 
 char recvbuf[DEFAULT_BUFLEN];
 char sendbuf[DEFAULT_BUFLEN];
@@ -32,7 +32,6 @@ typedef enum {
     CONN_USER_OK,               // Can change to: UNAUTHENTICATED (if 'pass XXX' fails too many times), or AUTHENTICATED (if 'pass XXX' matches correct password) 
     CONN_AUTHENTICATED,         // Can change to: UNAUTHENTICATED (if 'logoff' is given)
 } CONNECTION_STATE;
-
 
 #define CMD_EXIT        "exit"
 #define CMD_USER        "user"
@@ -84,7 +83,6 @@ Log(
         printf("Error opening log.txt file!\n");
     }
 }
-
 
 //
 // Returns TRUE if we should continue processing otherwise, and FALSE otherwise (when 'exit' has been given).
@@ -211,8 +209,6 @@ BOOLEAN InterpretCommand(
 
     if (*State == CONN_AUTHENTICATED)
     {
-		
-		///////////////// TODO: ADDED
 		// Command = 'NEWFILE'
 		if (0 == _stricmp(Command, CMD_NEWFILE))
 		{
@@ -251,7 +247,6 @@ BOOLEAN InterpretCommand(
 				if (hFind == INVALID_HANDLE_VALUE)
 				{
 					HANDLE hFile;
-
 					hFile = CreateFile(newpath,
 						GENERIC_ALL,
 						0,
@@ -275,12 +270,11 @@ BOOLEAN InterpretCommand(
 				}
 
 				CloseHandle(hFind);
-				return TRUE;
-
 				//
 				newpath = NULL;
 				free(newpath);
 				//
+				return TRUE;
 			}
 			else
 			{
@@ -347,19 +341,13 @@ BOOLEAN InterpretCommand(
 
 						return TRUE;
 					}
-
 				}
-
-
-				// SetReply(Output, OutLength, "[OK] Written to last created file!");
-				// return TRUE;
 			}
 		}
 
 
 		if (0 == _stricmp(Command, CMD_ENCRYPTFILE))
 		{
-
 			char *newpath;
 
 			if (NULL == Parameter)
@@ -384,8 +372,6 @@ BOOLEAN InterpretCommand(
 				printf("The PATH=%s\n", newpath);
 
 				last_created_file_name = newpath;
-				//newpath = strcat()
-
 
 				////////////////////
 				// Search that file actually exists
@@ -399,12 +385,10 @@ BOOLEAN InterpretCommand(
 					progress = 0;
 					do_work(newpath, 4, 0xAA);
 				}
-
 				//
 				newpath = NULL;
 				free(newpath);
 				//
-
 			}
 			else
 			{
@@ -412,10 +396,6 @@ BOOLEAN InterpretCommand(
 			}
 			return TRUE;
 		}
-		///////////////// TODO: ADDED
-
-
-
 
         // Command = 'LOGOFF', Parameter = NULL
         if (0 == _stricmp(Command, CMD_LOGOFF))
@@ -653,7 +633,10 @@ int main(int argc, char* argv[])
     closesocket(ListenSocket);
 
     {
-        char *connected_ip= inet_ntoa(clientInfo.sin_addr); 
+#pragma warning(push)
+#pragma warning(disable:4996)
+        char *connected_ip= inet_ntoa(clientInfo.sin_addr);
+#pragma warning(pop)
         int port = ntohs(clientInfo.sin_port);
         printf("Connected client: %s:%d\n", connected_ip, port);
     }
@@ -676,22 +659,15 @@ int main(int argc, char* argv[])
 		{
 			printf(">>>\n");
 			printf("Bytes received: %d\n", iResult);
-
-	
-
-			
-				{
+			{
 					if (!ProcessCommand(recvbuf, iResult, sendbuf, &sendSize, &connState, &userId))
 					{
 						iResult = 0;
 					}
-
-
-
-
 				// Echo the buffer back to the sender
 				iSendResult = send(ClientSocket, sendbuf, sendSize > DEFAULT_BUFLEN ? DEFAULT_BUFLEN : sendSize, 0);
-				if (iSendResult == SOCKET_ERROR) {
+				if (iSendResult == SOCKET_ERROR) 
+				{
 					printf("send failed with error: %d\n", WSAGetLastError());
 					closesocket(ClientSocket);
 					WSACleanup();
@@ -730,6 +706,7 @@ int main(int argc, char* argv[])
 
 	// delete allocated PTRs
 	free(last_created_file_name);
+	free(logged_in_user_name);
 
     return 0;
 }
