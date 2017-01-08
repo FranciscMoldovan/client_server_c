@@ -1,5 +1,8 @@
 Backup
 client/Debug
-Debug
+Debug/*.exe
+Debug/*.ilk
+Debug/*.pdb
+Debug/log.txt
 Release
 server/Debug
