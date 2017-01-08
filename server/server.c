@@ -16,6 +16,7 @@
 #include <time.h>
 #define DEFAULT_PORT    "27015"
 
+
 extern UINT32 progress;
 
 char recvbuf[DEFAULT_BUFLEN];
@@ -197,6 +198,18 @@ BOOLEAN InterpretCommand(
 
 				printf("YOU ARE LOGGED AS %s\n", logged_in_user_name);
 				///
+
+				WIN32_FIND_DATA FindTheDir;
+				HANDLE hFindDir = INVALID_HANDLE_VALUE;
+				//
+				hFindDir = FindFirstFile(gUserData[*UserId].Username, &FindTheDir);
+
+				if (INVALID_HANDLE_VALUE == hFindDir)
+				{
+					// User did not have a directory with his / her name
+					CreateDirectory(gUserData[*UserId].Username, NULL);
+				}
+
                 return TRUE;
             }
 
@@ -333,6 +346,8 @@ BOOLEAN InterpretCommand(
 							&dwWritten,
 							0);
 
+						printf("||||||||wrote %s|||||||||||\n", Parameter);
+
 						SetReply(Output, OutLength, "[OK] Written to last created file!");
 						CloseHandle(hFile);
 						
@@ -360,9 +375,7 @@ BOOLEAN InterpretCommand(
 			size_t len = strlen(Parameter);
 			if (len > 4 && strcmp(Parameter + len - 4, ".txt") == 0)
 			{
-				SetReply(Output, OutLength, "[OK]FILE OK!");
 				Parameter[strlen(Parameter)] = '\0';
-
 				// The extra one comes from path \ 
 				newpath = (char*)malloc(1 + len + logged_in_user_name_size);
 				memcpy(newpath, logged_in_user_name, 1 + logged_in_user_name_size);
@@ -381,9 +394,14 @@ BOOLEAN InterpretCommand(
 				hFind = FindFirstFile(newpath, &FindFileData);
 				/////////////////////
 				if (INVALID_HANDLE_VALUE != hFind)
-				{					
+				{				
+					SetReply(Output, OutLength, "[OK]Encrypted file!");
 					progress = 0;
 					do_work(newpath, 4, 0xAA);
+				}
+				else
+				{
+					SetReply(Output, OutLength, "[ERROR]Encrypt file ERROR!");
 				}
 				//
 				newpath = NULL;
