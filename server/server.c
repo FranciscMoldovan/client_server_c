@@ -23,6 +23,8 @@ char sendbuf[DEFAULT_BUFLEN];
 
 static char* last_created_file_name=NULL;
 static size_t last_created_file_name_size;
+static char* logged_in_user_name = NULL;
+static size_t logged_in_user_name_size;
 
 typedef enum {
     CONN_INVALID = 0,
@@ -188,7 +190,15 @@ BOOLEAN InterpretCommand(
                 SetReply(Output, OutLength, "[OK] Authentication successful.");
 
                 Log("[LOGIN] User %s (%d) logged in\n", gUserData[*UserId].Username, *UserId);
+				///
+				logged_in_user_name_size = strlen(gUserData[*UserId].Username);
+				logged_in_user_name = (char*)malloc((2+logged_in_user_name_size)*sizeof(char));
+				memcpy(logged_in_user_name, &(gUserData[*UserId].Username), logged_in_user_name_size);
+				logged_in_user_name[logged_in_user_name_size] = '\\';
+				logged_in_user_name[logged_in_user_name_size+1] = '\0';
 
+				printf("YOU ARE LOGGED AS %s", logged_in_user_name);
+				///
                 return TRUE;
             }
 
@@ -201,11 +211,13 @@ BOOLEAN InterpretCommand(
 
     if (*State == CONN_AUTHENTICATED)
     {
-
+		
 		///////////////// TODO: ADDED
 		// Command = 'NEWFILE'
 		if (0 == _stricmp(Command, CMD_NEWFILE))
 		{
+			char *newpath;
+
 			if (NULL == Parameter)
 			{
 				SetReply(Output, OutLength, "[ERROR] No file provided.");
@@ -217,12 +229,23 @@ BOOLEAN InterpretCommand(
 			if (len > 4 && strcmp(Parameter + len - 4, ".txt") == 0)
 			{
 				SetReply(Output, OutLength, "FILE OK!");
-
+				
 				// Search that file actually exists
 				WIN32_FIND_DATA FindFileData;
 				HANDLE hFind = INVALID_HANDLE_VALUE;
+				//
+				// The extra one comes from path \ 
+				newpath = (char*)malloc(1 + len + logged_in_user_name_size); 
+				memcpy(newpath, logged_in_user_name, 1 + logged_in_user_name_size);
+				*(newpath + logged_in_user_name_size) = '\\';
+				memcpy(newpath + logged_in_user_name_size + 1, Parameter, strlen(Parameter));
+				newpath[1 + len + logged_in_user_name_size] = '\0';
+				printf("The PATH=%s\n", newpath); 
 
-				hFind = FindFirstFile(Parameter, &FindFileData);
+				last_created_file_name = newpath;
+				//newpath = strcat()
+				//
+				hFind = FindFirstFile(newpath, &FindFileData);
 				GetLastError();
 
 				// Not found
@@ -230,7 +253,7 @@ BOOLEAN InterpretCommand(
 				{
 					HANDLE hFile;
 
-					hFile = CreateFile(Parameter,
+					hFile = CreateFile(newpath,
 						GENERIC_ALL,
 						0,
 						NULL,
@@ -241,10 +264,10 @@ BOOLEAN InterpretCommand(
 					{
 						SetReply(Output, OutLength, "[OK] Created new file");
 
-						last_created_file_name_size = strlen(Parameter);
-						last_created_file_name = (char*)malloc(last_created_file_name_size);
-						memcpy(last_created_file_name, Parameter, last_created_file_name_size);
-						last_created_file_name[last_created_file_name_size] = '\0';
+//						last_created_file_name_size = strlen(newpath);
+//						last_created_file_name = (char*)malloc(last_created_file_name_size);
+//						memcpy(last_created_file_name, newpath, last_created_file_name_size);
+//						last_created_file_name[last_created_file_name_size] = '\0';
 
 		//				printf("\n\nSTRING LAST FILE MADE = %s\n\n", last_created_file_name);
 						CloseHandle(hFile);
@@ -262,17 +285,23 @@ BOOLEAN InterpretCommand(
 				CloseHandle(hFind);
 				return TRUE;
 
+
+				//
+				newpath = NULL;
+				free(newpath);
+				//
 			}
 			else
 			{
 				SetReply(Output, OutLength, "[ERROR]....FILE format not OK");
 				return TRUE;
 			}
-
+		
 		}
 
 		if (0 == _stricmp(Command, CMD_WRITEFILE))
 		{
+
 			// No file created since program startup
 			if (NULL == last_created_file_name)
 			{
@@ -338,6 +367,9 @@ BOOLEAN InterpretCommand(
 
 		if (0 == _stricmp(Command, CMD_ENCRYPTFILE))
 		{
+
+			char *newpath;
+
 			if (NULL == Parameter)
 			{
 				SetReply(Output, OutLength, "[ERROR] No file provided.");
@@ -351,17 +383,29 @@ BOOLEAN InterpretCommand(
 				SetReply(Output, OutLength, "[OK]FILE OK!");
 				Parameter[strlen(Parameter)] = '\0';
 
+				// The extra one comes from path \ 
+				newpath = (char*)malloc(1 + len + logged_in_user_name_size);
+				memcpy(newpath, logged_in_user_name, 1 + logged_in_user_name_size);
+				*(newpath + logged_in_user_name_size) = '\\';
+				memcpy(newpath + logged_in_user_name_size + 1, Parameter, strlen(Parameter));
+				newpath[1 + len + logged_in_user_name_size] = '\0';
+				printf("The PATH=%s\n", newpath);
+
+				last_created_file_name = newpath;
+				//newpath = strcat()
+
+
 				////////////////////
 				// Search that file actually exists
 				WIN32_FIND_DATA FindFileData;
 				HANDLE hFind = INVALID_HANDLE_VALUE;
 
-				hFind = FindFirstFile(Parameter, &FindFileData);
+				hFind = FindFirstFile(newpath, &FindFileData);
 				/////////////////////
 				if (INVALID_HANDLE_VALUE != hFind)
 				{					
 					progress = 0;
-					do_work(Parameter, 4, 0xAA);
+					do_work(newpath, 4, 0xAA);
 				}
 
 			}
@@ -381,7 +425,9 @@ BOOLEAN InterpretCommand(
         {
             *State = CONN_UNAUTHENTICATED;
             SetReply(Output, OutLength, "[OK] Logged off.");
-
+			//
+			last_created_file_name = NULL;
+			//
             Log("[LOGOFF] User %s (%d) logged off\n", gUserData[*UserId].Username, *UserId);
 
             *UserId = -1;
